@@ -1,0 +1,53 @@
+{
+  "name": "raincoat",
+  "version": "1.0.0",
+  "description": "Isometric RPG game in a pixel-art style",
+  "author": "Emil Forslund",
+  "license": "MIT",
+  "keywords": [
+    "webgl2",
+    "webgl",
+    "game",
+    "rpg",
+    "pixel-art"
+  ],
+  "scripts": {
+    "build": "browserify ./src/main.js -d -p [minifyify --output js/bundle.js.map] -o js/bundle.min.js",
+    "debug": "watchify ./src/main.js --debug -v -o js/bundle.js"
+  },
+  "dependencies": {
+    "twgl.js": "^4.15.2"
+  },
+  "devDependencies": {
+    "@babel/core": "7.10.2",
+    "@babel/preset-env": "7.10.2",
+    "babelify": "10.0.0",
+    "browserify": "16.5.1",
+    "watchify": "3.11.1",
+    "brfs-babel": "2.0.0",
+    "minifyify": "^7.3.5"
+  },
+  "browserify": {
+    "plugin": [
+      [
+        "minifyify"
+      ]
+    ],
+    "transform": [
+      [
+        "brfs-babel"
+      ],
+      [
+        "./util/jsonify.js"
+      ],
+      [
+        "babelify",
+        {
+          "presets": [
+            "@babel/preset-env"
+          ]
+        }
+      ]
+    ]
+  }
+}
