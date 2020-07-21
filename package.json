@@ -12,7 +12,7 @@
     "pixel-art"
   ],
   "scripts": {
-    "build": "browserify ./src/main.js -d -p [minifyify --output js/bundle.js.map] -o js/bundle.min.js",
+    "build": "browserify ./src/main.js -d -p [minifyify --output js/bundle.js.map] -o js/bundle.js",
     "debug": "watchify ./src/main.js --debug -v -o js/bundle.js"
   },
   "dependencies": {
