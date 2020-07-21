@@ -25,7 +25,8 @@
     "browserify": "16.5.1",
     "watchify": "3.11.1",
     "brfs-babel": "2.0.0",
-    "minifyify": "^7.3.5"
+    "minifyify": "^7.3.5",
+    "lodash": ">=4.17.19"
   },
   "browserify": {
     "plugin": [
