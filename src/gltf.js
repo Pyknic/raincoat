@@ -207,7 +207,7 @@ function parseMeshes(gl, gltf) {
         }
     });
 }
-
+0
 function parseNodes(gl, gltf) {
     const origNodes = gltf.nodes;
     const skinNodes = [];

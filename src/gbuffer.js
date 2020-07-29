@@ -25,6 +25,49 @@ export class GBuffer {
 
         gl.clearColor(0, 0, 0, 1);
 
+        this.ssaoKernel = new Float32Array(64 * 3);
+        for (let i = 0; i < 64; i++) {
+            let sample = twgl.v3.create(
+                Math.random() * 2.0 - 1.0,
+                Math.random() * 2.0 - 1.0,
+                Math.random() * 0.95 + 0.05
+            );
+
+            twgl.v3.normalize(sample, sample);
+            twgl.v3.mulScalar(sample, Math.random(), sample);
+
+            let scale = i / 64.0;
+            scale *= scale;
+            scale = scale * 0.9 + 0.1;
+            twgl.v3.mulScalar(sample, scale, sample);
+
+            this.ssaoKernel[i * 3]     = sample[0];
+            this.ssaoKernel[i * 3 + 1] = sample[1];
+            this.ssaoKernel[i * 3 + 2] = sample[2];
+        }
+
+        const noiseSize = 32;
+        const noiseSizeSqr = noiseSize * noiseSize;
+        this.noiseData = new Float32Array(noiseSizeSqr * 3);
+        for (let i = 0; i < noiseSizeSqr; i++) {
+            this.noiseData[i * 3]     = Math.random() * 2.0 - 1.0; // -1 to 1
+            this.noiseData[i * 3 + 1] = Math.random() * 2.0 - 1.0; // -1 to 1
+            this.noiseData[i * 3 + 2] = Math.random() * 2.0 - 1.0; // -1 to 1
+
+            //this.noiseData[i * 3 + 2] = 0.05;                      // Close to 0
+        }
+
+        this.noiseTexture = gl.createTexture();
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, this.noiseTexture);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB16F,
+            noiseSize, noiseSize, 0, gl.RGB, gl.FLOAT, this.noiseData);
+        gl.bindTexture(gl.TEXTURE_2D, null);
+
         //
         // Main Pass
         //
@@ -237,14 +280,26 @@ export class GBuffer {
         gl.uniformMatrix4fv(shadowMatrixLoc, false, textureMatrix);
         const shadowBiasLoc = gl.getUniformLocation(this.edgesProgram.program, 'u_shadowBias');
         gl.uniform1f(shadowBiasLoc, this.shadowBias);
-        const sampleDistLoc = gl.getUniformLocation(this.edgesProgram.program, 'u_sampleDist');
-        gl.uniform1f(sampleDistLoc, this.sampleDist);
+
+        gl.activeTexture(gl.TEXTURE3);
+        gl.bindTexture(gl.TEXTURE_2D, this.noiseTexture);
+        const noiseTextureLoc = gl.getUniformLocation(this.edgesProgram.program, 'u_noiseTexture');
+        gl.uniform1i(noiseTextureLoc, 3);
+
+        for (let i = 0; i < 64; i++) {
+            const sampleLoc = gl.getUniformLocation(this.edgesProgram.program, `u_samples[${i}]`);
+            gl.uniform3f(sampleLoc, this.ssaoKernel[i * 3], this.ssaoKernel[i * 3 + 1], this.ssaoKernel[i * 3 + 2]);
+        }
+
+        //const sampleDistLoc = gl.getUniformLocation(this.edgesProgram.program, 'u_sampleDist');
+        //gl.uniform1f(sampleDistLoc, this.sampleDist);
 
         // console.log(textureMatrix);
 
         twgl.setUniforms(this.edgesProgram, {
             ...sharedUniforms,
-            u_view: camera.view
+            u_view: camera.view,
+            u_projection: camera.projection
         });
         gl.bindVertexArray(this.vao);
         gl.drawArrays(gl.TRIANGLES, 0, 3);
