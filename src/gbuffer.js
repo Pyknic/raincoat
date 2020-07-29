@@ -324,6 +324,11 @@ export class GBuffer {
         const edgesResultLoc = gl.getUniformLocation(this.blurProgram.program, 'u_edges');
         gl.uniform1i(edgesResultLoc, 0);
 
+        gl.activeTexture(gl.TEXTURE1);
+        gl.bindTexture(gl.TEXTURE_2D, this.mainPass.attachments[1]);
+        const blurPosLoc = gl.getUniformLocation(this.blurProgram.program, 'u_position');
+        gl.uniform1i(blurPosLoc, 1);
+
         gl.bindVertexArray(this.vao);
         gl.drawArrays(gl.TRIANGLES, 0, 3);
 
