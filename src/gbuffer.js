@@ -153,6 +153,17 @@ export class GBuffer {
         ]);
 
         //
+        // Blur Pass
+        //
+        this.blurPass = twgl.createFramebufferInfo(gl, [
+            colorTarget(gl), // Edges Blurred
+        ], GBUFFER_WIDTH, GBUFFER_HEIGHT);
+
+        gl.drawBuffers([
+            gl.COLOR_ATTACHMENT0
+        ]);
+
+        //
         // Compose Pass
         //
         this.composePass = twgl.createFramebufferInfo(gl, [
@@ -170,6 +181,7 @@ export class GBuffer {
 
         this.vao = gl.createVertexArray();
         this.edgesProgram = twgl.createProgramInfo(gl, [screenspaceVS, edgesFS]);
+        this.blurProgram = twgl.createProgramInfo(gl, [screenspaceVS, blurFS]);
         this.composeProgram = twgl.createProgramInfo(gl, [screenspaceVS, composeFS]);
         this.upscaleProgram = twgl.createProgramInfo(gl, [screenspaceVS, upscaleFS]);
 
@@ -291,16 +303,27 @@ export class GBuffer {
             gl.uniform3f(sampleLoc, this.ssaoKernel[i * 3], this.ssaoKernel[i * 3 + 1], this.ssaoKernel[i * 3 + 2]);
         }
 
-        //const sampleDistLoc = gl.getUniformLocation(this.edgesProgram.program, 'u_sampleDist');
-        //gl.uniform1f(sampleDistLoc, this.sampleDist);
-
-        // console.log(textureMatrix);
-
         twgl.setUniforms(this.edgesProgram, {
             ...sharedUniforms,
             u_view: camera.view,
             u_projection: camera.projection
         });
+        gl.bindVertexArray(this.vao);
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+        //
+        // Blur Pass (Blur the SSAO channel from the edges pass to reduce noise)
+        //
+        twgl.bindFramebufferInfo(gl, this.blurPass);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+
+        gl.useProgram(this.blurProgram.program);
+
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, this.edgesPass.attachments[0]);
+        const edgesResultLoc = gl.getUniformLocation(this.blurProgram.program, 'u_edges');
+        gl.uniform1i(edgesResultLoc, 0);
+
         gl.bindVertexArray(this.vao);
         gl.drawArrays(gl.TRIANGLES, 0, 3);
 
@@ -331,7 +354,7 @@ export class GBuffer {
         gl.uniform1i(normalLoc, 2);
 
         gl.activeTexture(gl.TEXTURE3);
-        gl.bindTexture(gl.TEXTURE_2D, this.edgesPass.attachments[0]);
+        gl.bindTexture(gl.TEXTURE_2D, this.blurPass.attachments[0]);
 
         const edgesLoc = gl.getUniformLocation(this.composeProgram.program, 'u_edges');
         gl.uniform1i(edgesLoc, 3);
@@ -379,7 +402,8 @@ function colorTarget(gl) {
         format: gl.RGBA,
         type: gl.UNSIGNED_BYTE,
         mag: gl.NEAREST,
-        min: gl.NEAREST
+        min: gl.NEAREST,
+        wrap: gl.CLAMP_TO_EDGE
     };
 }
 
@@ -408,3 +432,4 @@ const screenspaceVS = readFileSync('src/shader/screenspace.vert', 'utf8');
 const composeFS = readFileSync('src/shader/compose.frag', 'utf8');
 const upscaleFS = readFileSync('src/shader/upscale.frag', 'utf8');
 const edgesFS = readFileSync('src/shader/edges.frag', 'utf8');
+const blurFS = readFileSync('src/shader/blur.frag', 'utf8');

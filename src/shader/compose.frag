@@ -68,8 +68,8 @@ void main() {
    // hsv.z += edge.r * diffuseAmount;
     hsv.z *= lum;
 
-    //fbCompose = vec4(hsv2rgb(hsv), 1.0);
-    fbCompose = vec4(vec3(edge.b), 1.0);
+    fbCompose = vec4(hsv2rgb(hsv), 1.0);
+    //fbCompose = vec4(vec3(edge.b), 1.0);
     //fbCompose = vec4(edge.rgb, 1.0);
 
 
